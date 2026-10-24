@@ -162,428 +162,469 @@ Rectangle
         x: mainView.safeLeft
         y: mainView.safeTop
         width: parent.width - mainView.safeLeft - mainView.safeRight
-        height: UISettings.iconSizeDefault
+        // grow to make room for the scroll bar below the entries, if shown
+        height: UISettings.iconSizeDefault + (overflowing ? toolbarScrollBar.height : 0)
         z: 50
+
+        // true when the entries don't fit the toolbar width
+        property bool overflowing: toolbarRow.implicitWidth > width
         gradient: Gradient
         {
             GradientStop { position: 0; color: UISettings.toolbarStartMain }
             GradientStop { position: 1; color: UISettings.toolbarEnd }
         }
 
-        RowLayout
+        // Lets the toolbar be dragged sideways (and shows a scroll bar under the
+        // entries) when they don't fit the window, e.g. on small touch screens or
+        // with a large UI scaling factor. When everything fits, nothing changes.
+        Flickable
         {
-            spacing: 5
-            anchors.fill: parent
+            id: toolbarFlickable
+            x: 0
+            y: 0
+            width: parent.width
+            height: UISettings.iconSizeDefault
+            interactive: mainToolbar.overflowing
+            clip: mainToolbar.overflowing
+            flickableDirection: Flickable.HorizontalFlick
+            boundsBehavior: Flickable.StopAtBounds
+            contentWidth: toolbarRow.width
+            contentHeight: toolbarRow.height
 
-            ButtonGroup { id: menuBarGroup }
+            // declared outside the Flickable, so it is laid out below the entries
+            ScrollBar.horizontal: toolbarScrollBar
 
-            MenuBarEntry
+            RowLayout
             {
-                id: actEntry
-                Layout.alignment: Qt.AlignTop
-                imgSource: "qrc:/qlcplus.svg"
-                entryText: qsTr("Actions")
-                onPressed: actionsMenu.open()
-                autoExclusive: false
-                checkable: false
+                id: toolbarRow
+                spacing: 5
+                // fill the toolbar, but grow past it when the entries don't fit
+                width: Math.max(toolbarFlickable.width, implicitWidth)
+                height: UISettings.iconSizeDefault
 
-                Image
-                {
-                    visible: qlcplus.docModified
-                    source: "qrc:/filesave.svg"
-                    x: 1
-                    y: parent.height - height - 1
-                    height: parent.height / 3
-                    width: height
-                    sourceSize: Qt.size(width, height)
-                }
-            }
-            MenuBarEntry
-            {
-                id: fnfEntry
-                property string ctxName: "FIXANDFUNC"
-                Layout.alignment: Qt.AlignTop
-                property string ctxRes: "qrc:/FixturesAndFunctions.qml"
+                ButtonGroup { id: menuBarGroup }
 
-                //visible: qlcplus.accessMask & App.AC_FunctionEditing
-                imgSource: "qrc:/editor.svg"
-                entryText: qsTr("Fixtures & Functions")
-                checked: false
-                ButtonGroup.group: menuBarGroup
-                onCheckedChanged:
+                MenuBarEntry
                 {
-                    if (checked === true)
-                        switchToContext(fnfEntry.ctxName, fnfEntry.ctxRes)
-                }
-            }
-            MenuBarEntry
-            {
-                id: vcEntry
-                Layout.alignment: Qt.AlignTop
-                property string ctxName: "VC"
-                property string ctxRes: "qrc:/VirtualConsole.qml"
+                    id: actEntry
+                    Layout.alignment: Qt.AlignTop
+                    imgSource: "qrc:/qlcplus.svg"
+                    entryText: qsTr("Actions")
+                    onPressed: actionsMenu.open()
+                    autoExclusive: false
+                    checkable: false
 
-                visible: qlcplus.accessMask & App.AC_VCControl
-                imgSource: "qrc:/virtualconsole.svg"
-                entryText: qsTr("Virtual Console")
-                ButtonGroup.group: menuBarGroup
-                onCheckedChanged:
-                {
-                    if (checked === true)
-                        switchToContext(vcEntry.ctxName, vcEntry.ctxRes)
-                }
-                onRightClicked:
-                {
-                    vcEntry.visible = false
-                    contextManager.detachContext("VC")
-                }
-            }
-            MenuBarEntry
-            {
-                id: sdEntry
-                Layout.alignment: Qt.AlignTop
-                property string ctxName: "SDESK"
-                property string ctxRes: "qrc:/SimpleDesk.qml"
-
-                visible: qlcplus.accessMask & App.AC_SimpleDesk
-                imgSource: "qrc:/simpledesk.svg"
-                entryText: qsTr("Simple Desk")
-                ButtonGroup.group: menuBarGroup
-                onCheckedChanged:
-                {
-                    if (checked === true)
-                        switchToContext(sdEntry.ctxName, sdEntry.ctxRes)
-                }
-                onRightClicked:
-                {
-                    sdEntry.visible = false
-                    contextManager.detachContext("SDESK")
-                }
-            }
-            MenuBarEntry
-            {
-                id: smEntry
-                Layout.alignment: Qt.AlignTop
-                property string ctxName: "SHOWMGR"
-                property string ctxRes: "qrc:/ShowManager.qml"
-
-                visible: qlcplus.accessMask & App.AC_ShowManager
-                imgSource: "qrc:/showmanager.svg"
-                entryText: qsTr("Show Manager")
-                ButtonGroup.group: menuBarGroup
-                onCheckedChanged:
-                {
-                    if (checked === true)
-                        switchToContext(smEntry.ctxName, smEntry.ctxRes)
-                }
-                onRightClicked:
-                {
-                    smEntry.visible = false
-                    contextManager.detachContext("SHOWMGR")
-                }
-            }
-            MenuBarEntry
-            {
-                id: ioEntry
-                Layout.alignment: Qt.AlignTop
-                property string ctxName: "IOMGR"
-                property string ctxRes: "qrc:/InputOutputManager.qml"
-
-                visible: qlcplus.accessMask & App.AC_InputOutput
-                imgSource: "qrc:/inputoutput.svg"
-                entryText: qsTr("Input/Output")
-                ButtonGroup.group: menuBarGroup
-                onCheckedChanged:
-                {
-                    if (checked === true)
-                        switchToContext(ioEntry.ctxName, ioEntry.ctxRes)
-                }
-                onRightClicked:
-                {
-                    ioEntry.visible = false
-                    contextManager.detachContext("IOMGR")
-                }
-            }
-            Rectangle
-            {
-                // acts like an horizontal spacer
-                Layout.fillWidth: true
-                implicitHeight: parent.height
-                color: "transparent"
-            }
-
-            // ################## DMX DUMP ##################
-            IconButton
-            {
-                id: sceneDump
-                z: 2
-                implicitWidth: UISettings.iconSizeDefault
-                implicitHeight: UISettings.iconSizeDefault
-                Layout.alignment: Qt.AlignTop
-                bgColor: "transparent"
-                imgSource: "qrc:/dmxdump.svg"
-                imgMargins: 10
-                tooltip: qsTr("Dump DMX values on a Scene")
-                counter: (qlcplus.accessMask & App.AC_FunctionEditing)
-
-                property string bubbleLabel: {
-                    if (currentContext === sdEntry.ctxName)
-                        return simpleDesk ? simpleDesk.dumpValuesCount : ""
-                    else
-                        return contextManager ? contextManager.dumpValuesCount : ""
-                }
-
-                function updateDumpVariables()
-                {
-                    if (currentContext === sdEntry.ctxName)
+                    Image
                     {
-                        dmxDumpDialog.capabilityMask = simpleDesk ? simpleDesk.dumpChannelMask : 0
-                        dmxDumpDialog.channelSetMask = simpleDesk ? simpleDesk.dumpChannelMask : 0
-                    }
-                    else
-                    {
-                        dmxDumpDialog.capabilityMask = fixtureManager ? fixtureManager.capabilityMask : 0
-                        dmxDumpDialog.channelSetMask = contextManager ? contextManager.dumpChannelMask : 0
+                        visible: qlcplus.docModified
+                        source: "qrc:/filesave.svg"
+                        x: 1
+                        y: parent.height - height - 1
+                        height: parent.height / 3
+                        width: height
+                        sourceSize: Qt.size(width, height)
                     }
                 }
+                MenuBarEntry
+                {
+                    id: fnfEntry
+                    property string ctxName: "FIXANDFUNC"
+                    Layout.alignment: Qt.AlignTop
+                    property string ctxRes: "qrc:/FixturesAndFunctions.qml"
 
-                // channel count bubble
+                    //visible: qlcplus.accessMask & App.AC_FunctionEditing
+                    imgSource: "qrc:/editor.svg"
+                    entryText: qsTr("Fixtures & Functions")
+                    checked: false
+                    ButtonGroup.group: menuBarGroup
+                    onCheckedChanged:
+                    {
+                        if (checked === true)
+                            switchToContext(fnfEntry.ctxName, fnfEntry.ctxRes)
+                    }
+                }
+                MenuBarEntry
+                {
+                    id: vcEntry
+                    Layout.alignment: Qt.AlignTop
+                    property string ctxName: "VC"
+                    property string ctxRes: "qrc:/VirtualConsole.qml"
+
+                    visible: qlcplus.accessMask & App.AC_VCControl
+                    imgSource: "qrc:/virtualconsole.svg"
+                    entryText: qsTr("Virtual Console")
+                    ButtonGroup.group: menuBarGroup
+                    onCheckedChanged:
+                    {
+                        if (checked === true)
+                            switchToContext(vcEntry.ctxName, vcEntry.ctxRes)
+                    }
+                    onRightClicked:
+                    {
+                        vcEntry.visible = false
+                        contextManager.detachContext("VC")
+                    }
+                }
+                MenuBarEntry
+                {
+                    id: sdEntry
+                    Layout.alignment: Qt.AlignTop
+                    property string ctxName: "SDESK"
+                    property string ctxRes: "qrc:/SimpleDesk.qml"
+
+                    visible: qlcplus.accessMask & App.AC_SimpleDesk
+                    imgSource: "qrc:/simpledesk.svg"
+                    entryText: qsTr("Simple Desk")
+                    ButtonGroup.group: menuBarGroup
+                    onCheckedChanged:
+                    {
+                        if (checked === true)
+                            switchToContext(sdEntry.ctxName, sdEntry.ctxRes)
+                    }
+                    onRightClicked:
+                    {
+                        sdEntry.visible = false
+                        contextManager.detachContext("SDESK")
+                    }
+                }
+                MenuBarEntry
+                {
+                    id: smEntry
+                    Layout.alignment: Qt.AlignTop
+                    property string ctxName: "SHOWMGR"
+                    property string ctxRes: "qrc:/ShowManager.qml"
+
+                    visible: qlcplus.accessMask & App.AC_ShowManager
+                    imgSource: "qrc:/showmanager.svg"
+                    entryText: qsTr("Show Manager")
+                    ButtonGroup.group: menuBarGroup
+                    onCheckedChanged:
+                    {
+                        if (checked === true)
+                            switchToContext(smEntry.ctxName, smEntry.ctxRes)
+                    }
+                    onRightClicked:
+                    {
+                        smEntry.visible = false
+                        contextManager.detachContext("SHOWMGR")
+                    }
+                }
+                MenuBarEntry
+                {
+                    id: ioEntry
+                    Layout.alignment: Qt.AlignTop
+                    property string ctxName: "IOMGR"
+                    property string ctxRes: "qrc:/InputOutputManager.qml"
+
+                    visible: qlcplus.accessMask & App.AC_InputOutput
+                    imgSource: "qrc:/inputoutput.svg"
+                    entryText: qsTr("Input/Output")
+                    ButtonGroup.group: menuBarGroup
+                    onCheckedChanged:
+                    {
+                        if (checked === true)
+                            switchToContext(ioEntry.ctxName, ioEntry.ctxRes)
+                    }
+                    onRightClicked:
+                    {
+                        ioEntry.visible = false
+                        contextManager.detachContext("IOMGR")
+                    }
+                }
                 Rectangle
                 {
-                    x: -3
-                    y: parent.height - height + 3
-                    width: sceneDump.width * 0.4
-                    height: width
-                    color: "red"
-                    border.width: 1
-                    border.color: UISettings.fgMain
-                    radius: 3
-                    clip: true
-                    visible: sceneDump.bubbleLabel !== "0" ? true : false
-
-                    RobotoText
-                    {
-                        anchors.centerIn: parent
-                        height: parent.height * 0.7
-                        label: sceneDump.bubbleLabel
-                        fontSize: height
-                    }
+                    // acts like an horizontal spacer
+                    Layout.fillWidth: true
+                    implicitHeight: parent.height
+                    color: "transparent"
                 }
 
-                MouseArea
+                // ################## DMX DUMP ##################
+                IconButton
                 {
-                    id: dumpDragArea
-                    anchors.fill: parent
-                    drag.target: dumpDragItem
-                    drag.threshold: 10
+                    id: sceneDump
+                    z: 2
+                    implicitWidth: UISettings.iconSizeDefault
+                    implicitHeight: UISettings.iconSizeDefault
+                    Layout.alignment: Qt.AlignTop
+                    bgColor: "transparent"
+                    imgSource: "qrc:/dmxdump.svg"
+                    imgMargins: 10
+                    tooltip: qsTr("Dump DMX values on a Scene")
+                    counter: (qlcplus.accessMask & App.AC_FunctionEditing)
 
-                    onClicked: (mouse) =>
-                    {
-                        sceneDump.updateDumpVariables()
-                        dmxDumpDialog.open()
-                        dmxDumpDialog.focusEditItem()
+                    property string bubbleLabel: {
+                        if (currentContext === sdEntry.ctxName)
+                            return simpleDesk ? simpleDesk.dumpValuesCount : ""
+                        else
+                            return contextManager ? contextManager.dumpValuesCount : ""
                     }
 
-                    property bool dragActive: drag.active
-
-                    onDragActiveChanged:
+                    function updateDumpVariables()
                     {
-                        console.log("Drag active changed: " + dragActive)
-                        if (dragActive == false)
+                        if (currentContext === sdEntry.ctxName)
                         {
-                            dumpDragItem.Drag.drop()
-                            dumpDragItem.parent = sceneDump
-                            dumpDragItem.x = 0
-                            dumpDragItem.y = 0
+                            dmxDumpDialog.capabilityMask = simpleDesk ? simpleDesk.dumpChannelMask : 0
+                            dmxDumpDialog.channelSetMask = simpleDesk ? simpleDesk.dumpChannelMask : 0
                         }
                         else
                         {
-                            dumpDragItem.parent = mainView
+                            dmxDumpDialog.capabilityMask = fixtureManager ? fixtureManager.capabilityMask : 0
+                            dmxDumpDialog.channelSetMask = contextManager ? contextManager.dumpChannelMask : 0
                         }
-
-                        dumpDragItem.Drag.active = dragActive
-                    }
-                }
-
-                Item
-                {
-                    id: dumpDragItem
-                    z: 99
-                    visible: dumpDragArea.drag.active
-
-                    Drag.source: dumpDragItem
-                    Drag.keys: [ "dumpValues" ]
-
-                    function itemDropped(id, name)
-                    {
-                        console.log("Dump values dropped on " + id)
-                        functionManager.selectFunctionID(id, false)
-                        sceneDump.updateDumpVariables()
-                        dmxDumpDialog.sceneName = name
-                        dmxDumpDialog.existingScene = true
-                        dmxDumpDialog.open()
-                        dmxDumpDialog.focusEditItem()
                     }
 
+                    // channel count bubble
                     Rectangle
                     {
-                        width: UISettings.iconSizeMedium
+                        x: -3
+                        y: parent.height - height + 3
+                        width: sceneDump.width * 0.4
                         height: width
-                        radius: width / 4
                         color: "red"
+                        border.width: 1
+                        border.color: UISettings.fgMain
+                        radius: 3
+                        clip: true
+                        visible: sceneDump.bubbleLabel !== "0" ? true : false
 
                         RobotoText
                         {
                             anchors.centerIn: parent
+                            height: parent.height * 0.7
                             label: sceneDump.bubbleLabel
+                            fontSize: height
                         }
                     }
-                }
 
-                PopupDMXDump
-                {
-                    id: dmxDumpDialog
-                    implicitWidth: Math.min(UISettings.bigItemHeight * 4, mainView.width / 3)
-
-                    onAccepted:
+                    MouseArea
                     {
-                        if (currentContext === sdEntry.ctxName)
+                        id: dumpDragArea
+                        anchors.fill: parent
+                        drag.target: dumpDragItem
+                        drag.threshold: 10
+                        // keep dragging the dump bubble when the toolbar is flickable
+                        preventStealing: true
+
+                        onClicked: (mouse) =>
                         {
-                            simpleDesk.dumpDmxChannels(sceneName, getChannelsMask(), existingScene && func ? func.id : -1, nonZeroOnly)
+                            sceneDump.updateDumpVariables()
+                            dmxDumpDialog.open()
+                            dmxDumpDialog.focusEditItem()
                         }
-                        else
+
+                        property bool dragActive: drag.active
+
+                        onDragActiveChanged:
                         {
-                            contextManager.dumpDmxChannels(getChannelsMask(), sceneName, existingScene && func ? func.id : -1,
-                                                           allChannels, nonZeroOnly);
+                            console.log("Drag active changed: " + dragActive)
+                            if (dragActive == false)
+                            {
+                                dumpDragItem.Drag.drop()
+                                dumpDragItem.parent = sceneDump
+                                dumpDragItem.x = 0
+                                dumpDragItem.y = 0
+                            }
+                            else
+                            {
+                                dumpDragItem.parent = mainView
+                            }
+
+                            dumpDragItem.Drag.active = dragActive
                         }
                     }
-                }
-            }
 
-            // spacer
-            Rectangle
-            {
-                width: UISettings.iconSizeDefault / 2
-                color: "transparent"
-            }
-
-            // ################## BEATS ##################
-            RobotoText
-            {
-                label: "BPM: " + (ioManager.bpmNumber > 0 ? ioManager.bpmNumber : qsTr("Off"))
-                color: gsMouseArea.containsMouse ? UISettings.bgLight : "transparent"
-                fontSize: UISettings.textSizeDefault
-                Layout.alignment: Qt.AlignTop
-                implicitWidth: width
-                implicitHeight: parent.height
-
-                MouseArea
-                {
-                    id: gsMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onClicked: beatSelectionPanel.visible = !beatSelectionPanel.visible
-                }
-                BeatGeneratorsPanel
-                {
-                    id: beatSelectionPanel
-                    parent: mainView
-                    y: mainToolbar.y + mainToolbar.height
-                    x: mainToolbar.x + beatIndicator.x - width
-                    z: 51
-                    visible: false
-                }
-            }
-            Rectangle
-            {
-                id: beatIndicator
-                implicitWidth: height
-                implicitHeight: parent.height * 0.5
-                Layout.alignment: Qt.AlignVCenter
-                radius: height / 2
-                border.width: 2
-                border.color: UISettings.bgMedium
-                color: UISettings.fgMedium
-
-                ColorAnimation on color
-                {
-                    id: cAnim
-                    from: "#00FF00"
-                    to: UISettings.fgMedium
-                    // half the duration of the current BPM
-                    duration: ioManager.bpmNumber ? 30000 / ioManager.bpmNumber : 200
-                    running: false
-                }
-
-                Connections
-                {
-                    id: beatSignal
-                    target: ioManager
-                    function onBeat()
+                    Item
                     {
-                        cAnim.restart()
+                        id: dumpDragItem
+                        z: 99
+                        visible: dumpDragArea.drag.active
+
+                        Drag.source: dumpDragItem
+                        Drag.keys: [ "dumpValues" ]
+
+                        function itemDropped(id, name)
+                        {
+                            console.log("Dump values dropped on " + id)
+                            functionManager.selectFunctionID(id, false)
+                            sceneDump.updateDumpVariables()
+                            dmxDumpDialog.sceneName = name
+                            dmxDumpDialog.existingScene = true
+                            dmxDumpDialog.open()
+                            dmxDumpDialog.focusEditItem()
+                        }
+
+                        Rectangle
+                        {
+                            width: UISettings.iconSizeMedium
+                            height: width
+                            radius: width / 4
+                            color: "red"
+
+                            RobotoText
+                            {
+                                anchors.centerIn: parent
+                                label: sceneDump.bubbleLabel
+                            }
+                        }
+                    }
+
+                    PopupDMXDump
+                    {
+                        id: dmxDumpDialog
+                        implicitWidth: Math.min(UISettings.bigItemHeight * 4, mainView.width / 3)
+
+                        onAccepted:
+                        {
+                            if (currentContext === sdEntry.ctxName)
+                            {
+                                simpleDesk.dumpDmxChannels(sceneName, getChannelsMask(), existingScene && func ? func.id : -1, nonZeroOnly)
+                            }
+                            else
+                            {
+                                contextManager.dumpDmxChannels(getChannelsMask(), sceneName, existingScene && func ? func.id : -1,
+                                                               allChannels, nonZeroOnly);
+                            }
+                        }
                     }
                 }
-            }
 
-            // spacer
-            Rectangle
-            {
-                width: UISettings.iconSizeDefault / 2
-                color: "transparent"
-            }
-
-            // ################## STOP ALL FUNCTIONS ##################
-            IconButton
-            {
-                id: stopAllButton
-                implicitWidth: UISettings.iconSizeDefault
-                implicitHeight: UISettings.iconSizeDefault
-                Layout.alignment: Qt.AlignTop
-                enabled: runningCount ? true : false
-                bgColor: "transparent"
-                faSource: FontAwesome.fa_octagon
-                faColor: "red"
-                tooltip: qsTr("Stop all the running functions")
-
-                onClicked: qlcplus.stopAllFunctions()
-
-                property int runningCount: qlcplus.runningFunctionsCount
-
-                onRunningCountChanged: console.log("Functions running: " + runningCount)
-
-                RobotoText
-                {
-                    anchors.centerIn: parent
-                    height: parent.height * 0.2
-                    fontSize: height
-                    label: "STOP"
-                }
-
+                // spacer
                 Rectangle
                 {
-                    x: parent.width / 2
-                    y: parent.height / 2
-                    width: parent.width * 0.4
-                    height: width
-                    color: UISettings.highlight
-                    border.width: 1
-                    border.color: UISettings.fgMain
-                    radius: 3
-                    clip: true
-                    visible: stopAllButton.runningCount
+                    width: UISettings.iconSizeDefault / 2
+                    color: "transparent"
+                }
+
+                // ################## BEATS ##################
+                RobotoText
+                {
+                    label: "BPM: " + (ioManager.bpmNumber > 0 ? ioManager.bpmNumber : qsTr("Off"))
+                    color: gsMouseArea.containsMouse ? UISettings.bgLight : "transparent"
+                    fontSize: UISettings.textSizeDefault
+                    Layout.alignment: Qt.AlignTop
+                    implicitWidth: width
+                    implicitHeight: parent.height
+
+                    MouseArea
+                    {
+                        id: gsMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: beatSelectionPanel.visible = !beatSelectionPanel.visible
+                    }
+                    BeatGeneratorsPanel
+                    {
+                        id: beatSelectionPanel
+                        parent: mainView
+                        y: mainToolbar.y + mainToolbar.height
+                        x: mainToolbar.x + beatIndicator.x - toolbarFlickable.contentX - width
+                        z: 51
+                        visible: false
+                    }
+                }
+                Rectangle
+                {
+                    id: beatIndicator
+                    implicitWidth: height
+                    implicitHeight: parent.height * 0.5
+                    Layout.alignment: Qt.AlignVCenter
+                    radius: height / 2
+                    border.width: 2
+                    border.color: UISettings.bgMedium
+                    color: UISettings.fgMedium
+
+                    ColorAnimation on color
+                    {
+                        id: cAnim
+                        from: "#00FF00"
+                        to: UISettings.fgMedium
+                        // half the duration of the current BPM
+                        duration: ioManager.bpmNumber ? 30000 / ioManager.bpmNumber : 200
+                        running: false
+                    }
+
+                    Connections
+                    {
+                        id: beatSignal
+                        target: ioManager
+                        function onBeat()
+                        {
+                            cAnim.restart()
+                        }
+                    }
+                }
+
+                // spacer
+                Rectangle
+                {
+                    width: UISettings.iconSizeDefault / 2
+                    color: "transparent"
+                }
+
+                // ################## STOP ALL FUNCTIONS ##################
+                IconButton
+                {
+                    id: stopAllButton
+                    implicitWidth: UISettings.iconSizeDefault
+                    implicitHeight: UISettings.iconSizeDefault
+                    Layout.alignment: Qt.AlignTop
+                    enabled: runningCount ? true : false
+                    bgColor: "transparent"
+                    faSource: FontAwesome.fa_octagon
+                    faColor: "red"
+                    tooltip: qsTr("Stop all the running functions")
+
+                    onClicked: qlcplus.stopAllFunctions()
+
+                    property int runningCount: qlcplus.runningFunctionsCount
+
+                    onRunningCountChanged: console.log("Functions running: " + runningCount)
 
                     RobotoText
                     {
                         anchors.centerIn: parent
-                        height: parent.height * 0.7
-                        label: stopAllButton.runningCount
+                        height: parent.height * 0.2
                         fontSize: height
+                        label: "STOP"
+                    }
+
+                    Rectangle
+                    {
+                        x: parent.width / 2
+                        y: parent.height / 2
+                        width: parent.width * 0.4
+                        height: width
+                        color: UISettings.highlight
+                        border.width: 1
+                        border.color: UISettings.fgMain
+                        radius: 3
+                        clip: true
+                        visible: stopAllButton.runningCount
+
+                        RobotoText
+                        {
+                            anchors.centerIn: parent
+                            height: parent.height * 0.7
+                            label: stopAllButton.runningCount
+                            fontSize: height
+                        }
                     }
                 }
-            }
 
-        } // end of RowLayout
+            } // end of RowLayout
+        } // end of toolbarFlickable
+
+        CustomScrollBar
+        {
+            id: toolbarScrollBar
+            x: 0
+            y: toolbarFlickable.height
+            width: parent.width
+            height: UISettings.scrollBarWidth / 2
+            orientation: Qt.Horizontal
+            visible: mainToolbar.overflowing
+        }
     } // end of mainToolbar
 
     Loader
@@ -632,7 +673,7 @@ Rectangle
     {
         id: actionsMenu
         x: mainToolbar.x + 1
-        y: mainToolbar.y + actEntry.height + 1
+        y: mainToolbar.y + mainToolbar.height + 1
         visible: false
         z: visible ? 99 : 0
     }
