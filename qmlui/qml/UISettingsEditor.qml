@@ -73,6 +73,7 @@ Rectangle
 
     GenericButton
     {
+        id: closeButton
         width: height
         height: UISettings.iconSizeDefault
         anchors.right: parent.right
@@ -143,13 +144,16 @@ Rectangle
     {
         id: editorFlickable
         anchors.fill: parent
+        // leave room for the scroll bar, so it doesn't cover the settings
+        anchors.rightMargin: editorScrollBar.visible ? editorScrollBar.width : 0
         z: 1
         clip: true
         boundsBehavior: Flickable.StopAtBounds
         contentWidth: editorGrid.width
         contentHeight: editorGrid.height
 
-        ScrollBar.vertical: CustomScrollBar { }
+        // declared outside the Flickable, so it is laid out beside the settings
+        ScrollBar.vertical: editorScrollBar
 
         GridLayout
         {
@@ -712,5 +716,14 @@ Rectangle
                 }
             }
         }
+    }
+
+    CustomScrollBar
+    {
+        id: editorScrollBar
+        z: 2
+        anchors.top: closeButton.bottom
+        anchors.bottom: parent.bottom
+        anchors.right: parent.right
     }
 }
